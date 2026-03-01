@@ -122,7 +122,7 @@ def get_reviews(request: Request):
 
 @app.on_event("startup")
 async def startup():
-    logger.info("⚡ CodeVigil by Manish v2.0 is running")
+    logger.info("⚡ CodeReview by Manish v2.0 is running")
     logger.info("📊 Dashboard:  http://localhost:8000")
     logger.info("📚 API Docs:   http://localhost:8000/docs")
     logger.info("🔗 Webhook:    POST /webhooks/github")
