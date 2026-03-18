@@ -1,148 +1,181 @@
-# CodeReview by Manish (AI PR Guardian)
+# 🛡️ AI Pull Request Guardian
 
-[![AI PR Guardian](https://img.shields.io/badge/AI%20PR%20Guardian-Active-success)](https://github.com/your-username/your-repo)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100.0+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+An automated code review system that uses **AI + static analysis** to review GitHub pull requests and post structured, inline feedback — directly on the PR.
 
-**CodeReview by Manish (AI PR Guardian)** is like having an automated, senior developer reviewing your code 24/7. 
-
-**How it works:**
-1. **The Trigger:** Whenever you or someone else opens a "Pull Request" on GitHub, GitHub sends a signal to this application.
-2. **The Analysis:** Your application reads the new code changes and hands them over to a highly intelligent AI (using Groq or OpenAI).
-3. **The Review:** The AI reads the code, looks for bugs, checks for best practices, and figures out how the code can be improved.
-4. **The Feedback:** The application then posts the AI's suggestions and feedback directly back onto the GitHub Pull Request as a comment, exactly like a human teammate would.
-5. **The Dashboard:** Finally, it provides a web interface (dashboard) where you can log in and see a history of all the reviews it has done, along with statistics on code quality.
+![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111+-green?logo=fastapi)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-- **Automated AI Code Review:** Connect your GitHub repository to have PRs automatically reviewed upon creation, synchronization, or when marked "ready for review".
-- **Intelligent Feedback:** Uses advanced large language models (e.g., Llama 3 via Groq ) to provide in-depth code quality checks, identify issues, and suggest improvements.
-- **Easy CI/CD Integration:** Simply add the provided GitHub Action workflow to have your repository automatically trigger the AI review endpoint.
-- **User Dashboard:** A simple API dashboard serving global code review statistics (total reviews, average score, token usage, issues tracked).
-- **Multi-user Support:** Integrate with GitHub OAuth for multi-user login and tracking individualized code review history.
-- **Docker Ready:** Comes with a ready-to-use Dockerfile that makes it perfectly optimized for deployments to platforms like Railway, Render, or ECS.
+| Feature | Description |
+|---------|-------------|
+| 🔗 **GitHub Webhook Integration** | Listens for PR events (opened, synchronize, ready_for_review) |
+| 🔍 **Static Analysis** | Runs **flake8** (style) and **bandit** (security) on Python diffs |
+| 🤖 **LLM-Powered Review** | Uses **Groq** (Llama 3) or **OpenAI** for intelligent code review |
+| 💬 **Inline PR Comments** | Posts review comments directly on the PR with severity levels |
+| 📊 **Merge Safety Score** | 0–100 score based on issue severity (critical/high/medium/low) |
+| 📋 **RULES.md Support** | Per-repo coding rules fed into the LLM prompt |
+| 📈 **Dashboard** | Streamlit UI showing review history, metrics, and token usage |
+| ⚡ **GitHub Actions** | CI workflow to trigger reviews via Actions |
 
----
+## 🏗️ Architecture
 
-## 🛠 Tech Stack
-
-- **Backend Framework:** FastAPI (Python 3.11)
-- **Deployment & Containerization:** Docker
-- **AI / LLM Integration:** Groqa
-- **CI / CD Tooling:** GitHub Actions, Webhooks
-- **Authentication:** GitHub OAuth App
-
----
-
-## 📦 Project Structure
-
-```text
-.
-├── .env.example             # Example environment variables required
-├── .github/
-│   └── workflows/
-│       └── pr-review.yml    # GitHub Actions Workflow to trigger reviews
-├── backend/
-│   ├── app/                 # FastAPI Endpoints, Webhooks & Core Engine
-│   ├── tests/               # Unit, integration, and webhook testing logic
-│   └── requirements.txt     # Python dependencies
-├── Dockerfile               # Container setup
-└── .gitignore
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     GITHUB PLATFORM                          │
+│  PR opened/updated ──webhook──► GitHub App ──► Actions       │
+└────────────────────────────┬─────────────────────────────────┘
+                             │ HTTPS POST /webhooks/github
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     FASTAPI BACKEND                          │
+│  1. Verify HMAC signature (X-Hub-Signature-256)              │
+│  2. Parse PR metadata (repo, number, author, head SHA)       │
+│  3. Fetch diff via GitHub REST API                           │
+│  4. Fetch RULES.md from repo (if exists)                     │
+│  5. Queue background review task                             │
+└────────────────────────────┬─────────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     REVIEW ENGINE                            │
+│  Per-file loop:                                              │
+│    a) Run flake8 → style issues                              │
+│    b) Run bandit → security issues                           │
+│    c) Build LLM prompt with diff + findings + RULES.md       │
+│    d) Parse structured JSON response → ReviewComment[]       │
+└────────────────────────────┬─────────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  GITHUB REVIEW API                           │
+│  POST /repos/{owner}/{repo}/pulls/{n}/reviews                │
+│  Inline comments with severity + merge safety score          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
----
+## 📁 Project Structure
 
-## ⚙️ Setup and Installation
+```
+ai-pr-guardian/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI app entry point
+│   │   ├── config.py            # Environment settings (Pydantic)
+│   │   ├── github_webhook.py    # Webhook + Action trigger routers
+│   │   ├── github_api.py        # GitHub REST API client
+│   │   ├── review_engine.py     # Orchestrates analyzers + LLM
+│   │   ├── analyzers.py         # flake8, bandit wrappers
+│   │   ├── llm_client.py        # Groq/OpenAI abstraction
+│   │   ├── models.py            # Pydantic data models
+│   │   └── utils.py             # Signature verification, helpers
+│   ├── tests/
+│   │   ├── test_webhook.py      # Webhook endpoint tests
+│   │   └── test_analyzers.py    # Utility + analyzer tests
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── .env                     # Your local config (git-ignored)
+├── dashboard/
+│   └── app.py                   # Streamlit review dashboard
+├── .github/workflows/
+│   └── pr-review.yml            # GitHub Actions workflow
+├── RULES.md                     # Example project rules template
+└── README.md
+```
 
-### Prerequisites
+## 🚀 Quick Start
 
-- Python 3.11+
-- A GitHub Personal Access Token (PAT) with `repo` scopes.
-- Groq or OpenAI API Key.
-- Optional: A registered [GitHub OAuth App](https://github.com/settings/developers) for multi-user authentication.
-
-### Local Initialization
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/your-repo.git
-   cd your-repo
-   ```
-
-2. **Create a virtual environment and install dependencies:**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Environment Variables:**
-   Copy `.env.example` to `.env` in the `backend/` directory and configure your keys.
-   ```bash
-   cp ../.env.example .env
-   ```
-   **Important Settings in `.env`:**
-   ```env
-   GITHUB_TOKEN=ghp_your_personal_access_token
-   LLM_PROVIDER=groq # or openai
-   GROQ_API_KEY=gsk_your_groq_api_key
-   APP_URL=http://localhost:8000
-   ```
-
-4. **Run the API server:**
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-   The dashboard and API will be available at [http://localhost:8000](http://localhost:8000). To view API documentation, navigate to `http://localhost:8000/docs`.
-
----
-
-## 🐳 Docker Deployment
-
-The application is fully containerized. You can run it effortlessly using Docker.
+### 1. Clone & Install
 
 ```bash
-docker build -t ai-pr-guardian .
-docker run -p 8000:8000 --env-file backend/.env ai-pr-guardian
+git clone https://github.com/YOUR_USERNAME/ai-pr-guardian.git
+cd ai-pr-guardian/backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
+pip install -r requirements.txt
 ```
 
----
+### 2. Configure Environment
 
-## 🔗 GitHub Actions Integration
-
-You can easily set up GitHub Actions in any child repository to automatically trigger code reviews on Pull Requests. Just drop the `pr-review.yml` from our project into the `.github/workflows/` directory of the target repository.
-
-Make sure to configure the standard GitHub repository secrets on the target repository:
-- `REVIEW_API_URL`: The deployed URL (or valid ngrok tunnel) for this application.
-- `REVIEW_API_KEY`: Must match the `REVIEW_API_KEY` defined in this server's `.env`.
-
-### Example Target Repository Workflow File
-```yaml
-name: AI PR Guardian
-on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
-
-jobs:
-  ai-review:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
-    steps:
-    - name: Trigger AI Review
-      run: |
-        curl -X POST '${{ secrets.REVIEW_API_URL }}/webhooks/github/action' \
-             -H 'Content-Type: application/json' \
-             -H 'X-Api-Key: ${{ secrets.REVIEW_API_KEY }}' \
-             -d '{
-               "repo": "${{ github.repository }}",
-               "pr_number": ${{ github.event.pull_request.number }},
-               "head_sha": "${{ github.event.pull_request.head.sha }}"
-             }'
+```bash
+cp .env.example .env
 ```
 
+Edit `.env` with your credentials:
 
+| Variable | Description |
+|----------|-------------|
+| `GITHUB_WEBHOOK_SECRET` | Secret for webhook HMAC verification |
+| `GITHUB_TOKEN` | GitHub Personal Access Token (PAT) with `repo` scope |
+| `LLM_PROVIDER` | `groq` or `openai` |
+| `GROQ_API_KEY` | Your Groq API key ([console.groq.com](https://console.groq.com)) |
+| `OPENAI_API_KEY` | Your OpenAI API key (if using OpenAI) |
+
+### 3. Run the API Server
+
+```bash
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
+
+Visit **http://localhost:8000/docs** to see the Swagger API docs.
+
+### 4. Expose to GitHub (Local Development)
+
+```bash
+ngrok http 8000
+```
+
+Copy the HTTPS URL and add it as a webhook in your GitHub repo:
+- **URL**: `https://your-ngrok-url/webhooks/github`
+- **Content type**: `application/json`
+- **Secret**: same as `GITHUB_WEBHOOK_SECRET`
+- **Events**: Pull requests
+
+### 5. Run the Dashboard
+
+```bash
+cd dashboard
+streamlit run app.py
+```
+
+Visit **http://localhost:8501** to see the review dashboard.
+
+### 6. Run Tests
+
+```bash
+cd backend
+python -m pytest tests/ -v
+```
+
+## 🧪 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/webhooks/github` | GitHub webhook receiver |
+| `POST` | `/webhooks/github/action` | GitHub Actions trigger |
+| `GET`  | `/health` | Health check |
+| `GET`  | `/stats` | Review statistics |
+| `GET`  | `/reviews` | Review history |
+
+## 📝 RULES.md
+
+Place a `RULES.md` file in the root of any repo you want to guard. The AI will read it and enforce your project-specific conventions during reviews. See the included [RULES.md](RULES.md) for a template.
+
+## 🛠️ Tech Stack
+
+| Area | Technology |
+|------|------------|
+| Backend API | FastAPI, async/await, Pydantic v2, BackgroundTasks |
+| GitHub Integration | Webhooks, REST API, PR Review API, Actions |
+| LLM | Groq (Llama 3), OpenAI (GPT-4o-mini), structured JSON output |
+| Static Analysis | flake8 (style), bandit (security) |
+| Dashboard | Streamlit |
+| Testing | pytest, FastAPI TestClient |
+| Security | HMAC-SHA256 signature verification |
+
+## 📄 License
+
+MIT
