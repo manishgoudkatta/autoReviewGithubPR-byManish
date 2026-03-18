@@ -18,7 +18,6 @@ An automated code review system that uses **AI + static analysis** to review Git
 | 💬 **Inline PR Comments** | Posts review comments directly on the PR with severity levels |
 | 📊 **Merge Safety Score** | 0–100 score based on issue severity (critical/high/medium/low) |
 | 📋 **RULES.md Support** | Per-repo coding rules fed into the LLM prompt |
-| 📈 **Dashboard** | Streamlit UI showing review history, metrics, and token usage |
 | ⚡ **GitHub Actions** | CI workflow to trigger reviews via Actions |
 
 ## 🏗️ Architecture
@@ -84,86 +83,6 @@ ai-pr-guardian/
 └── README.md
 ```
 
-## 🚀 Quick Start
-
-### 1. Clone & Install
-
-```bash
-git clone https://github.com/YOUR_USERNAME/ai-pr-guardian.git
-cd ai-pr-guardian/backend
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS/Linux
-pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your credentials:
-
-| Variable | Description |
-|----------|-------------|
-| `GITHUB_WEBHOOK_SECRET` | Secret for webhook HMAC verification |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (PAT) with `repo` scope |
-| `LLM_PROVIDER` | `groq` or `openai` |
-| `GROQ_API_KEY` | Your Groq API key ([console.groq.com](https://console.groq.com)) |
-| `OPENAI_API_KEY` | Your OpenAI API key (if using OpenAI) |
-
-### 3. Run the API Server
-
-```bash
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
-
-Visit **http://localhost:8000/docs** to see the Swagger API docs.
-
-### 4. Expose to GitHub (Local Development)
-
-```bash
-ngrok http 8000
-```
-
-Copy the HTTPS URL and add it as a webhook in your GitHub repo:
-- **URL**: `https://your-ngrok-url/webhooks/github`
-- **Content type**: `application/json`
-- **Secret**: same as `GITHUB_WEBHOOK_SECRET`
-- **Events**: Pull requests
-
-### 5. Run the Dashboard
-
-```bash
-cd dashboard
-streamlit run app.py
-```
-
-Visit **http://localhost:8501** to see the review dashboard.
-
-### 6. Run Tests
-
-```bash
-cd backend
-python -m pytest tests/ -v
-```
-
-## 🧪 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/webhooks/github` | GitHub webhook receiver |
-| `POST` | `/webhooks/github/action` | GitHub Actions trigger |
-| `GET`  | `/health` | Health check |
-| `GET`  | `/stats` | Review statistics |
-| `GET`  | `/reviews` | Review history |
-
-## 📝 RULES.md
-
-Place a `RULES.md` file in the root of any repo you want to guard. The AI will read it and enforce your project-specific conventions during reviews. See the included [RULES.md](RULES.md) for a template.
-
 ## 🛠️ Tech Stack
 
 | Area | Technology |
@@ -172,10 +91,7 @@ Place a `RULES.md` file in the root of any repo you want to guard. The AI will r
 | GitHub Integration | Webhooks, REST API, PR Review API, Actions |
 | LLM | Groq (Llama 3), OpenAI (GPT-4o-mini), structured JSON output |
 | Static Analysis | flake8 (style), bandit (security) |
-| Dashboard | Streamlit |
+
 | Testing | pytest, FastAPI TestClient |
 | Security | HMAC-SHA256 signature verification |
 
-## 📄 License
-
-MIT
